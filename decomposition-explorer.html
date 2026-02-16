@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Series Decomposition Explorer | BDDM Session 4</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/data.js"></script>
+  <style>
+    .ma-btn { transition: all 0.15s ease; }
+    .ma-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+    .toggle-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    #interpretationBox { transition: background-color 0.3s ease, border-color 0.3s ease; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Navigation -->
+  <nav class="bg-white shadow-sm border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 py-3">
+      <div class="flex flex-wrap items-center gap-4">
+        <span class="font-bold text-gray-800">Session 4 Tools</span>
+        <div class="flex flex-wrap gap-2 text-sm">
+          <a href="index.html" class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition">Home</a>
+          <a href="decomposition-explorer.html" class="px-3 py-1 rounded-full bg-blue-600 text-white font-medium">Decomposition</a>
+          <a href="smoothing-explorer.html" class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition">Smoothing</a>
+          <a href="seasonality-models.html" class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition">Seasonality Models</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto p-4">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-4">
+      <h1 class="text-2xl font-bold text-gray-800 mb-1">Time Series Decomposition Explorer</h1>
+      <p class="text-gray-600">Toggle components on and off to see how trend, seasonality, and residuals combine to form the observed revenue pattern.</p>
+    </div>
+
+    <!-- Activity Box -->
+    <div class="bg-blue-50 border-2 border-blue-300 rounded-lg shadow-sm p-5 mb-4">
+      <h2 class="text-lg font-bold text-blue-800 mb-3 flex items-center gap-2">
+        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        Activity: How does seasonality shape this hotel's revenue?
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm text-blue-900">
+        <div class="flex gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">1</span>
+          <p><strong>Look at the grey revenue line.</strong> Describe the pattern: do you see repeating peaks and troughs?</p>
+        </div>
+        <div class="flex gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">2</span>
+          <p><strong>Check "Show Trend."</strong> Watch the blue line appear. Is revenue growing, shrinking, or flat over 5 years?</p>
+        </div>
+        <div class="flex gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">3</span>
+          <p><strong>Check "Show Seasonal."</strong> Look at the bar chart. Which month has the tallest green bar? The deepest red?</p>
+        </div>
+        <div class="flex gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">4</span>
+          <p><strong>Change the MA window to 3.</strong> Watch the trend line get bumpy. Why doesn't a 3-month window work for monthly data?</p>
+        </div>
+        <div class="flex gap-3 md:col-span-2">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">5</span>
+          <p><strong>Set MA window back to 12.</strong> Read the interpretation panel for the full story of this hotel's seasonal DNA.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+      <!-- LEFT: Controls -->
+      <div class="lg:col-span-3 space-y-3">
+
+        <!-- Context -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Dataset</h3>
+          <p class="text-sm text-gray-600">Thessaloniki Palace Hotel, a 150-room city hotel. <strong>60 months</strong> of revenue data (Jan 2021 &ndash; Dec 2025).</p>
+          <p class="text-xs text-gray-400 mt-2">Actual = Trend + Seasonal + Irregular</p>
+        </div>
+
+        <!-- Component Toggles -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-3">Show Components</h3>
+          <div class="space-y-3">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="toggleTrend" checked class="rounded text-blue-600 w-5 h-5">
+              <span class="toggle-dot bg-blue-500"></span>
+              <span class="text-sm font-medium">Trend (CMA)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="toggleSeasonal" checked class="rounded text-green-600 w-5 h-5">
+              <span class="toggle-dot bg-green-500"></span>
+              <span class="text-sm font-medium">Seasonal Indices</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="toggleFitted" class="rounded text-emerald-600 w-5 h-5">
+              <span class="toggle-dot" style="background: repeating-linear-gradient(90deg, #10b981 0px, #10b981 4px, transparent 4px, transparent 8px);"></span>
+              <span class="text-sm font-medium">Fitted (T + S)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- MA Window -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Moving Average Window</h3>
+          <p class="text-xs text-gray-500 mb-3">How many months to average?</p>
+          <div class="grid grid-cols-4 gap-2">
+            <button onclick="setMAWindow(3)" id="ma3" class="ma-btn text-sm font-bold py-2 rounded-lg border-2 border-gray-200 hover:border-blue-400">3</button>
+            <button onclick="setMAWindow(6)" id="ma6" class="ma-btn text-sm font-bold py-2 rounded-lg border-2 border-gray-200 hover:border-blue-400">6</button>
+            <button onclick="setMAWindow(12)" id="ma12" class="ma-btn text-sm font-bold py-2 rounded-lg border-2 border-gray-200 hover:border-blue-400 active">12</button>
+            <button onclick="setMAWindow(24)" id="ma24" class="ma-btn text-sm font-bold py-2 rounded-lg border-2 border-gray-200 hover:border-blue-400">24</button>
+          </div>
+          <p class="text-xs text-gray-400 mt-2" id="maHint">12 months = one full seasonal cycle</p>
+        </div>
+
+        <!-- Data loss indicator -->
+        <div class="bg-gray-50 rounded-lg shadow-sm p-3">
+          <p class="text-xs text-gray-500" id="dataLossInfo">CMA uses 48 of 60 months (6 lost at each end)</p>
+        </div>
+      </div>
+
+      <!-- CENTER: Main Chart -->
+      <div class="lg:col-span-5 space-y-3">
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Monthly Revenue &mdash; Thessaloniki Palace Hotel</h3>
+          <div style="height: 400px;">
+            <canvas id="mainChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Seasonal Chart + Interpretation -->
+      <div class="lg:col-span-4 space-y-3">
+
+        <!-- Seasonal Indices Chart -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-1">Seasonal Indices by Month</h3>
+          <p class="text-xs text-gray-400 mb-2">How much each month deviates from the trend</p>
+          <div style="height: 220px;">
+            <canvas id="seasonalChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Peak/Trough Cards -->
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-green-50 rounded-lg p-3 border border-green-200 text-center">
+            <p class="text-xs text-green-700 font-medium">Peak Month</p>
+            <p class="text-lg font-bold text-green-800" id="peakMonth">--</p>
+            <p class="text-sm font-mono text-green-700" id="peakValue">--</p>
+          </div>
+          <div class="bg-red-50 rounded-lg p-3 border border-red-200 text-center">
+            <p class="text-xs text-red-700 font-medium">Trough Month</p>
+            <p class="text-lg font-bold text-red-800" id="troughMonth">--</p>
+            <p class="text-sm font-mono text-red-700" id="troughValue">--</p>
+          </div>
+        </div>
+
+        <!-- Dynamic Interpretation -->
+        <div class="rounded-xl shadow-md p-5 border-2" id="interpretationBox" style="border-color: #3b82f6; background-color: #eff6ff;">
+          <h3 class="text-base font-bold mb-2 flex items-center gap-2" id="interpTitle" style="color: #1e40af;">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Interpretation
+          </h3>
+          <p class="text-sm leading-relaxed" id="interpText" style="color: #1e3a5f;">Loading...</p>
+        </div>
+
+        <!-- Key Terms -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Key Terms</h3>
+          <div class="text-xs text-gray-600 space-y-2">
+            <div>
+              <p class="font-semibold text-gray-800">CMA (Centred Moving Average)</p>
+              <p>Average of W consecutive months, centred on the middle month. Smooths out seasonal spikes to reveal the trend.</p>
+            </div>
+            <div>
+              <p class="font-semibold text-gray-800">Seasonal Index</p>
+              <p>How much a calendar month typically deviates from the trend, in euros. Positive = above trend, negative = below. The 12 indices sum to zero.</p>
+            </div>
+            <div>
+              <p class="font-semibold text-gray-800">Additive Decomposition</p>
+              <p>Actual = Trend + Seasonal + Irregular. Works when the seasonal swing stays roughly the same size regardless of the trend level.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== CONSTANTS =====
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const revenues = HOTEL_DATA.map(d => d.revenue);
+    const labels = HOTEL_DATA.map(d => d.month);
+    const n = revenues.length; // 60
+
+    // ===== STATE =====
+    let currentMAWindow = 12;
+    let showTrend = true;
+    let showSeasonal = true;
+    let showFitted = false;
+
+    // ===== COMPUTATION =====
+
+    function computeCMA(window) {
+      const cma = new Array(n).fill(null);
+
+      if (window % 2 === 1) {
+        // Odd window: no centering needed
+        const half = Math.floor(window / 2);
+        for (let i = half; i < n - half; i++) {
+          let sum = 0;
+          for (let j = i - half; j <= i + half; j++) sum += revenues[j];
+          cma[i] = sum / window;
+        }
+      } else {
+        // Even window: 2xW centred MA
+        const half = window / 2;
+        // Simple MAs
+        const simpleMAs = [];
+        for (let i = 0; i <= n - window; i++) {
+          let sum = 0;
+          for (let j = i; j < i + window; j++) sum += revenues[j];
+          simpleMAs.push(sum / window);
+        }
+        // Centre by averaging consecutive pairs
+        for (let i = 0; i < simpleMAs.length - 1; i++) {
+          cma[i + half] = (simpleMAs[i] + simpleMAs[i + 1]) / 2;
+        }
+      }
+      return cma;
+    }
+
+    function computeSeasonalIndices(cma) {
+      // Detrend
+      const detrended = revenues.map((r, i) => cma[i] !== null ? r - cma[i] : null);
+
+      // Group by calendar month
+      const monthGroups = Array.from({ length: 12 }, () => []);
+      detrended.forEach((d, i) => {
+        if (d !== null) monthGroups[i % 12].push(d);
+      });
+
+      // Average each month
+      const rawIndices = monthGroups.map(g =>
+        g.length > 0 ? g.reduce((a, b) => a + b, 0) / g.length : 0
+      );
+
+      // Adjust to sum to zero
+      const rawSum = rawIndices.reduce((a, b) => a + b, 0);
+      const adjustment = rawSum / 12;
+      return rawIndices.map(idx => idx - adjustment);
+    }
+
+    function computeFittedValues(cma, indices) {
+      return revenues.map((_, i) => cma[i] !== null ? cma[i] + indices[i % 12] : null);
+    }
+
+    // ===== CHART SETUP =====
+
+    const mainCtx = document.getElementById('mainChart').getContext('2d');
+    const seasonalCtx = document.getElementById('seasonalChart').getContext('2d');
+
+    // Initial computation
+    let cma = computeCMA(currentMAWindow);
+    let indices = computeSeasonalIndices(cma);
+    let fitted = computeFittedValues(cma, indices);
+
+    // Main chart
+    const mainChart = new Chart(mainCtx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Revenue',
+            data: revenues,
+            borderColor: 'rgb(156, 163, 175)',
+            backgroundColor: 'rgba(156, 163, 175, 0.08)',
+            borderWidth: 3,
+            pointRadius: 2,
+            pointHoverRadius: 5,
+            tension: 0.1,
+            fill: true,
+            order: 3
+          },
+          {
+            label: 'Trend (CMA)',
+            data: cma,
+            borderColor: 'rgb(59, 130, 246)',
+            borderWidth: 4,
+            pointRadius: 0,
+            tension: 0.3,
+            fill: false,
+            hidden: !showTrend,
+            order: 2
+          },
+          {
+            label: 'Fitted (Trend + Seasonal)',
+            data: fitted,
+            borderColor: 'rgb(16, 185, 129)',
+            borderWidth: 2,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            tension: 0.1,
+            fill: false,
+            hidden: !showFitted,
+            order: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { usePointStyle: true, font: { size: 12 } }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                if (ctx.parsed.y === null) return null;
+                return ctx.dataset.label + ': \u20AC' + Math.round(ctx.parsed.y).toLocaleString();
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              maxRotation: 45,
+              autoSkip: true,
+              maxTicksLimit: 12,
+              font: { size: 11 }
+            }
+          },
+          y: {
+            title: { display: true, text: 'Revenue (\u20AC)', font: { size: 12 } },
+            ticks: {
+              callback: function(v) { return '\u20AC' + (v / 1000).toFixed(0) + 'K'; },
+              font: { size: 11 }
+            }
+          }
+        }
+      }
+    });
+
+    // Seasonal bar chart with inline labels
+    const barLabelPlugin = {
+      id: 'barLabels',
+      afterDatasetsDraw(chart) {
+        if (!showSeasonal) return;
+        const { ctx } = chart;
+        const meta = chart.getDatasetMeta(0);
+        const dataset = chart.data.datasets[0];
+        meta.data.forEach((bar, i) => {
+          const value = dataset.data[i];
+          if (value === null || value === undefined) return;
+          ctx.save();
+          ctx.font = 'bold 10px system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillStyle = value >= 0 ? '#166534' : '#991b1b';
+          const sign = value >= 0 ? '+' : '';
+          const label = sign + '\u20AC' + Math.round(value / 1000) + 'K';
+          const yPos = value >= 0 ? bar.y - 6 : bar.y + 14;
+          ctx.fillText(label, bar.x, yPos);
+          ctx.restore();
+        });
+      }
+    };
+
+    const seasonalChart = new Chart(seasonalCtx, {
+      type: 'bar',
+      data: {
+        labels: MONTH_NAMES,
+        datasets: [{
+          label: 'Seasonal Index',
+          data: indices,
+          backgroundColor: indices.map(v => v >= 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
+          borderColor: indices.map(v => v >= 0 ? 'rgb(22, 163, 74)' : 'rgb(220, 38, 38)'),
+          borderWidth: 2,
+          borderRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                const v = ctx.parsed.y;
+                const sign = v >= 0 ? '+' : '';
+                return sign + '\u20AC' + Math.round(v).toLocaleString() + ' vs trend';
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { size: 11 } } },
+          y: {
+            title: { display: true, text: 'Index (\u20AC)', font: { size: 11 } },
+            ticks: {
+              callback: function(v) {
+                return (v >= 0 ? '+' : '') + '\u20AC' + (v / 1000).toFixed(0) + 'K';
+              },
+              font: { size: 10 }
+            },
+            grid: {
+              color: function(ctx) { return ctx.tick.value === 0 ? '#374151' : '#e5e7eb'; },
+              lineWidth: function(ctx) { return ctx.tick.value === 0 ? 2 : 1; }
+            }
+          }
+        }
+      },
+      plugins: [barLabelPlugin]
+    });
+
+    // ===== UPDATE FUNCTIONS =====
+
+    function update() {
+      // Recompute
+      cma = computeCMA(currentMAWindow);
+      indices = computeSeasonalIndices(cma);
+      fitted = computeFittedValues(cma, indices);
+
+      // Update main chart
+      mainChart.data.datasets[1].data = cma;
+      mainChart.data.datasets[1].hidden = !showTrend;
+      mainChart.data.datasets[2].data = fitted;
+      mainChart.data.datasets[2].hidden = !showFitted;
+      mainChart.update();
+
+      // Update seasonal chart
+      const ds = seasonalChart.data.datasets[0];
+      ds.data = indices;
+      ds.backgroundColor = indices.map(v =>
+        showSeasonal
+          ? (v >= 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(239, 68, 68, 0.7)')
+          : 'rgba(209, 213, 219, 0.4)'
+      );
+      ds.borderColor = indices.map(v =>
+        showSeasonal
+          ? (v >= 0 ? 'rgb(22, 163, 74)' : 'rgb(220, 38, 38)')
+          : 'rgb(209, 213, 219)'
+      );
+      seasonalChart.update();
+
+      // Update peak/trough cards
+      updatePeakTrough();
+
+      // Update interpretation
+      updateInterpretation();
+
+      // Update data loss info
+      updateDataLossInfo();
+    }
+
+    function updatePeakTrough() {
+      let peakIdx = 0, troughIdx = 0;
+      for (let i = 1; i < 12; i++) {
+        if (indices[i] > indices[peakIdx]) peakIdx = i;
+        if (indices[i] < indices[troughIdx]) troughIdx = i;
+      }
+      document.getElementById('peakMonth').textContent = MONTH_NAMES[peakIdx];
+      document.getElementById('peakValue').textContent = '+\u20AC' + Math.round(indices[peakIdx]).toLocaleString();
+      document.getElementById('troughMonth').textContent = MONTH_NAMES[troughIdx];
+      document.getElementById('troughValue').textContent = '\u20AC' + Math.round(indices[troughIdx]).toLocaleString();
+    }
+
+    function updateDataLossInfo() {
+      const w = currentMAWindow;
+      const half = Math.floor(w / 2);
+      const usable = n - (w % 2 === 0 ? w : w - 1);
+      const lost = n - usable;
+      document.getElementById('dataLossInfo').textContent =
+        `CMA uses ${usable} of ${n} months (${half} lost at each end)`;
+
+      // MA window hint
+      const hints = {
+        3: '3 months: too short for annual seasonality',
+        6: '6 months: captures some seasonality but not all',
+        12: '12 months = one full seasonal cycle',
+        24: '24 months: very smooth but loses lots of data'
+      };
+      document.getElementById('maHint').textContent = hints[w] || '';
+    }
+
+    function updateInterpretation() {
+      const box = document.getElementById('interpretationBox');
+      const title = document.getElementById('interpTitle');
+      const text = document.getElementById('interpText');
+
+      // Find trend endpoints
+      let firstCMA = null, lastCMA = null, firstIdx = -1, lastIdx = -1;
+      for (let i = 0; i < n; i++) {
+        if (cma[i] !== null && firstCMA === null) { firstCMA = cma[i]; firstIdx = i; }
+        if (cma[i] !== null) { lastCMA = cma[i]; lastIdx = i; }
+      }
+
+      const trendGrowth = lastCMA && firstCMA ? lastCMA - firstCMA : 0;
+      const years = (lastIdx - firstIdx) / 12;
+
+      // Find peak and trough months
+      let peakIdx = 0, troughIdx = 0;
+      for (let i = 1; i < 12; i++) {
+        if (indices[i] > indices[peakIdx]) peakIdx = i;
+        if (indices[i] < indices[troughIdx]) troughIdx = i;
+      }
+      const swing = indices[peakIdx] - indices[troughIdx];
+
+      let message = '';
+
+      // Warning for non-12 windows
+      if (currentMAWindow === 3) {
+        box.style.borderColor = '#dc2626';
+        box.style.backgroundColor = '#fef2f2';
+        title.style.color = '#991b1b';
+        title.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg> Warning: 3-month window';
+        text.style.color = '#991b1b';
+        message = 'A 3-month moving average does NOT fully remove seasonality. Look at the trend line \u2014 it still has bumps! A 3-month window cannot cancel a 12-month seasonal cycle. The seasonal indices below are distorted because the "trend" still contains seasonal variation. Switch to 12 months to see the clean decomposition.';
+      } else if (currentMAWindow === 6) {
+        box.style.borderColor = '#f59e0b';
+        box.style.backgroundColor = '#fffbeb';
+        title.style.color = '#92400e';
+        title.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg> Partial: 6-month window';
+        text.style.color = '#92400e';
+        message = 'A 6-month window removes some seasonal variation but not all. The trend line is smoother than with 3 months, but still shows ripples. For monthly data with a 12-month seasonal cycle, you need exactly 12 months so the summer peaks and winter troughs cancel out perfectly.';
+      } else if (currentMAWindow === 24) {
+        box.style.borderColor = '#8b5cf6';
+        box.style.backgroundColor = '#f5f3ff';
+        title.style.color = '#5b21b6';
+        title.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Ultra-smooth: 24-month window';
+        text.style.color = '#5b21b6';
+        message = `A 24-month window is extremely smooth \u2014 it averages TWO full seasonal cycles. But you lose 12 months of data at each end, leaving only ${n - 24} of ${n} usable months. The trend is so heavily smoothed that short-term shifts disappear. The 12-month window is usually the best balance.`;
+      } else {
+        // MA = 12 (the good case)
+        box.style.borderColor = '#3b82f6';
+        box.style.backgroundColor = '#eff6ff';
+        title.style.color = '#1e40af';
+        title.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Decomposition (12-month CMA)';
+        text.style.color = '#1e3a5f';
+
+        const parts = [];
+
+        if (showTrend && firstCMA !== null) {
+          parts.push(`<strong>Trend:</strong> Revenue grew from ~\u20AC${Math.round(firstCMA/1000)}K (${labels[firstIdx]}) to ~\u20AC${Math.round(lastCMA/1000)}K (${labels[lastIdx]}) \u2014 about +\u20AC${Math.round(trendGrowth/1000)}K over ${years.toFixed(1)} years.`);
+        }
+
+        if (showSeasonal) {
+          parts.push(`<strong>Seasonality:</strong> ${MONTH_NAMES[peakIdx]} peaks at +\u20AC${Math.round(indices[peakIdx]).toLocaleString()} above trend. ${MONTH_NAMES[troughIdx]} dips to \u20AC${Math.round(indices[troughIdx]).toLocaleString()} below. The peak-to-trough swing is \u20AC${Math.round(swing).toLocaleString()} per month.`);
+        }
+
+        if (showFitted) {
+          parts.push(`<strong>Fitted line:</strong> The green dashed line shows Trend + Seasonal Index for each month. The gap between this line and the grey actual data is the irregular (unexplained) component.`);
+        }
+
+        if (!showTrend && !showSeasonal && !showFitted) {
+          parts.push('Toggle the components above to see the decomposition layers. <strong>Show Trend</strong> reveals the long-term growth direction. <strong>Show Seasonal</strong> quantifies the monthly pattern.');
+        }
+
+        message = parts.join('<br><br>');
+      }
+
+      text.innerHTML = message;
+    }
+
+    // ===== EVENT HANDLERS =====
+
+    function setMAWindow(w) {
+      currentMAWindow = w;
+      // Update button styles
+      document.querySelectorAll('.ma-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('ma' + w).classList.add('active');
+      update();
+    }
+
+    document.getElementById('toggleTrend').addEventListener('change', function() {
+      showTrend = this.checked;
+      update();
+    });
+
+    document.getElementById('toggleSeasonal').addEventListener('change', function() {
+      showSeasonal = this.checked;
+      update();
+    });
+
+    document.getElementById('toggleFitted').addEventListener('change', function() {
+      showFitted = this.checked;
+      update();
+    });
+
+    // ===== INITIALIZE =====
+    update();
+  </script>
+</body>
+</html>

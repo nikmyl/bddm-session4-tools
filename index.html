@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session 4: Time Series Interactive Tools | BDDM Course</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Navigation -->
+  <nav class="bg-white shadow-sm border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 py-3">
+      <div class="flex flex-wrap items-center gap-4">
+        <span class="font-bold text-gray-800">Session 4 Tools</span>
+        <div class="flex flex-wrap gap-2 text-sm">
+          <a href="index.html" class="px-3 py-1 rounded-full bg-blue-600 text-white font-medium">Home</a>
+          <a href="decomposition-explorer.html" class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition">Decomposition</a>
+          <a href="smoothing-explorer.html" class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition">Smoothing</a>
+          <a href="seasonality-models.html" class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition">Seasonality Models</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto p-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm p-8 mb-8">
+      <h1 class="text-3xl font-bold text-gray-800 mb-3">Time Series &amp; Forecasting Interactive Tools</h1>
+      <p class="text-lg text-gray-600 mb-4">Session 4: Time Series and Forecasting</p>
+      <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+        <p class="text-blue-800"><strong>Scenario:</strong> Thessaloniki Palace Hotel, a 150-room city hotel in Thessaloniki, Greece. You have 60 months (5 years) of monthly revenue data. Each tool below explores a key concept in time series analysis and forecasting using this dataset.</p>
+      </div>
+    </div>
+
+    <!-- Tool Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <!-- Tool 1: Decomposition Explorer -->
+      <a href="decomposition-explorer.html" class="block bg-white rounded-lg shadow-sm hover:shadow-md transition p-6 border-t-4 border-blue-500">
+        <div class="text-2xl mb-3">1</div>
+        <h2 class="text-xl font-bold text-gray-800 mb-2">Decomposition Explorer</h2>
+        <p class="text-sm text-gray-500 mb-3">Trend &bull; Seasonality &bull; Moving Average</p>
+        <p class="text-gray-600 mb-4">Toggle trend, seasonal, and fitted components on and off. Change the moving average window and watch how decomposition separates signal from noise.</p>
+        <div class="flex flex-wrap gap-1">
+          <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">CMA</span>
+          <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">Seasonal Indices</span>
+          <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">Additive Model</span>
+        </div>
+      </a>
+
+      <!-- Tool 2: Smoothing Constant Explorer -->
+      <a href="smoothing-explorer.html" class="block bg-white rounded-lg shadow-sm hover:shadow-md transition p-6 border-t-4 border-teal-500">
+        <div class="text-2xl mb-3">2</div>
+        <h2 class="text-xl font-bold text-gray-800 mb-2">Smoothing Constant Explorer</h2>
+        <p class="text-sm text-gray-500 mb-3">SES &bull; Alpha &bull; Forecast Accuracy</p>
+        <p class="text-gray-600 mb-4">Drag the alpha slider and watch Simple Exponential Smoothing react. Can SES beat the naive seasonal baseline? Discover why method choice depends on data structure.</p>
+        <div class="flex flex-wrap gap-1">
+          <span class="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded">SES</span>
+          <span class="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded">MAPE</span>
+          <span class="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded">Baseline-First</span>
+        </div>
+      </a>
+
+      <!-- Tool 3: Seasonality Models -->
+      <a href="seasonality-models.html" class="block bg-white rounded-lg shadow-sm hover:shadow-md transition p-6 border-t-4 border-purple-500">
+        <div class="text-2xl mb-3">3</div>
+        <h2 class="text-xl font-bold text-gray-800 mb-2">Additive vs Multiplicative</h2>
+        <p class="text-sm text-gray-500 mb-3">Seasonality Models &bull; Residual Diagnostics</p>
+        <p class="text-gray-600 mb-4">Switch between additive and multiplicative decomposition on two datasets. See when fixed-euro seasonal indices break down and why ratios work better.</p>
+        <div class="flex flex-wrap gap-1">
+          <span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded">Additive</span>
+          <span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded">Multiplicative</span>
+          <span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded">Residuals</span>
+        </div>
+      </a>
+
+      <!-- Dataset Info Card -->
+      <div class="bg-gray-50 rounded-lg shadow-sm p-6 border-t-4 border-gray-400">
+        <div class="text-2xl mb-3 text-gray-400">i</div>
+        <h2 class="text-xl font-bold text-gray-800 mb-2">About the Dataset</h2>
+        <p class="text-sm text-gray-500 mb-3">Thessaloniki Palace Hotel &bull; Greece</p>
+        <ul class="text-gray-600 text-sm space-y-1">
+          <li><strong>60</strong> monthly observations (Jan 2021 &ndash; Dec 2025)</li>
+          <li><strong>Revenue:</strong> &euro;231K &ndash; &euro;522K per month</li>
+          <li><strong>Pattern:</strong> Clear summer peaks (Jul&ndash;Aug), winter troughs (Dec&ndash;Jan), upward trend</li>
+          <li><strong>Model:</strong> Additive decomposition (seasonal swings stable in size)</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="mt-8 text-center text-sm text-gray-400">
+      BDDM Course &mdash; Session 4: Time Series and Forecasting &mdash; 16 Feb 2026
+    </div>
+  </div>
+</body>
+</html>

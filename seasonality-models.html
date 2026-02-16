@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Additive vs Multiplicative Explorer | BDDM Session 4</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/data.js"></script>
+  <style>
+    .toggle-btn { transition: all 0.15s ease; cursor: pointer; }
+    .toggle-btn:hover { transform: translateY(-1px); }
+    #interpretationBox { transition: background-color 0.3s ease, border-color 0.3s ease; }
+    #summaryCard { transition: background-color 0.3s ease, border-color 0.3s ease; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Navigation -->
+  <nav class="bg-white shadow-sm border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 py-3">
+      <div class="flex flex-wrap items-center gap-4">
+        <span class="font-bold text-gray-800">Session 4 Tools</span>
+        <div class="flex flex-wrap gap-2 text-sm">
+          <a href="index.html" class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition">Home</a>
+          <a href="decomposition-explorer.html" class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition">Decomposition</a>
+          <a href="smoothing-explorer.html" class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition">Smoothing</a>
+          <a href="seasonality-models.html" class="px-3 py-1 rounded-full bg-purple-600 text-white font-medium">Seasonality Models</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto p-4">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-4">
+      <h1 class="text-2xl font-bold text-gray-800 mb-1">Additive vs Multiplicative Explorer</h1>
+      <p class="text-gray-600">When seasonal swings grow with the trend, the additive model breaks down. Switch datasets and models to see why.</p>
+    </div>
+
+    <!-- Activity Box -->
+    <div class="bg-blue-50 border-2 border-blue-300 rounded-lg shadow-sm p-5 mb-4">
+      <h2 class="text-lg font-bold text-blue-800 mb-3 flex items-center gap-2">
+        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        Activity: When does additive decomposition break?
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm text-blue-900">
+        <div class="flex gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">1</span>
+          <p><strong>Default view: Thessaloniki + Additive.</strong> The fitted line (green) tracks the actual data well. Residuals look random.</p>
+        </div>
+        <div class="flex gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">2</span>
+          <p><strong>Switch to Multiplicative.</strong> The fit looks almost identical. For this data, both models work.</p>
+        </div>
+        <div class="flex gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">3</span>
+          <p><strong>Switch dataset to Beach Resort.</strong> Notice the seasonal peaks get taller over time &mdash; the swings are growing.</p>
+        </div>
+        <div class="flex gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">4</span>
+          <p><strong>Keep Multiplicative, then switch to Additive.</strong> Watch the residuals &mdash; do errors fan out in later years?</p>
+        </div>
+        <div class="flex gap-3 md:col-span-2 bg-blue-100 rounded-lg p-3 mt-1">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm">5</span>
+          <p><strong>Switch back to Multiplicative.</strong> Residuals shrink and become uniform. The multiplicative model matches this data's structure.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+      <!-- LEFT: Controls -->
+      <div class="lg:col-span-3 space-y-3">
+
+        <!-- Dataset Toggle -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Dataset</h3>
+          <div class="space-y-2">
+            <button id="btnThess" onclick="switchDataset('thessaloniki')" class="toggle-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-blue-400 bg-blue-50 text-blue-900 font-semibold">
+              <span class="font-bold">Thessaloniki Palace</span>
+              <span class="block text-xs opacity-75">City hotel &mdash; moderate growth, stable swings</span>
+            </button>
+            <button id="btnBeach" onclick="switchDataset('beach')" class="toggle-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-gray-200 bg-white text-gray-600">
+              <span class="font-bold">Beach Resort</span>
+              <span class="block text-xs opacity-75">Fast growth &mdash; seasonal swings grow with trend</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Model Toggle -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Decomposition Model</h3>
+          <div class="space-y-2">
+            <button id="btnAdditive" onclick="switchModel('additive')" class="toggle-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-green-400 bg-green-50 text-green-900 font-semibold">
+              <span class="font-bold">Additive</span>
+              <span class="block text-xs opacity-75">Y = Trend + Seasonal + Irregular</span>
+            </button>
+            <button id="btnMultiplicative" onclick="switchModel('multiplicative')" class="toggle-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-gray-200 bg-white text-gray-600">
+              <span class="font-bold">Multiplicative</span>
+              <span class="block text-xs opacity-75">Y = Trend &times; Seasonal &times; Irregular</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- "What Changed?" Summary Card -->
+        <div class="rounded-lg shadow-sm p-4 border-2" id="summaryCard" style="border-color:#6b7280; background:#f9fafb;">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Residual Spread (last 24 months)</h3>
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Additive</span>
+              <span class="font-bold font-mono" id="addSpread">--</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Multiplicative</span>
+              <span class="font-bold font-mono" id="multSpread">--</span>
+            </div>
+            <div class="border-t pt-2">
+              <p class="text-xs font-semibold text-center" id="spreadVerdict">--</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Key Terms -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Key Terms</h3>
+          <div class="text-xs text-gray-600 space-y-2">
+            <div>
+              <p class="font-semibold text-gray-800">Additive Decomposition</p>
+              <p>Y = T + S + I. Seasonal swing is a fixed euro amount (e.g., July is always +&euro;108K above trend). Works when peaks and troughs are roughly the same height over time.</p>
+            </div>
+            <div>
+              <p class="font-semibold text-gray-800">Multiplicative Decomposition</p>
+              <p>Y = T &times; S &times; I. Seasonal swing is a ratio (e.g., July is always 1.72&times; the trend). Peaks grow taller as the trend rises &mdash; the swing <em>scales</em> with the level.</p>
+            </div>
+            <div>
+              <p class="font-semibold text-gray-800">Residuals (Irregular)</p>
+              <p>What's left after removing trend and seasonality. If the model is correct, residuals should be random with no pattern. A fan shape signals the wrong model.</p>
+            </div>
+            <div class="border-t pt-2 mt-2">
+              <p class="font-semibold text-gray-800 mb-1">How Residuals Are Calculated</p>
+              <p class="mb-1"><strong>Step 1 &mdash; Trend:</strong> Compute the 12-month Centred Moving Average (CMA) to get the trend, T.</p>
+              <p class="mb-1"><strong>Step 2 &mdash; Seasonal indices:</strong></p>
+              <ul class="list-disc list-inside ml-2 mb-1 space-y-0.5">
+                <li><em>Additive:</em> Subtract trend from actual: D = Y &minus; T. Average each calendar month's D values. Adjust so the 12 indices sum to zero. Units: &euro;.</li>
+                <li><em>Multiplicative:</em> Divide actual by trend: R = Y / T. Average each calendar month's R values. Adjust so the 12 indices average 1.0. Units: ratios.</li>
+              </ul>
+              <p class="mb-1"><strong>Step 3 &mdash; Fitted value:</strong></p>
+              <ul class="list-disc list-inside ml-2 mb-1 space-y-0.5">
+                <li><em>Additive:</em> Fitted = T + S (trend plus seasonal index in &euro;)</li>
+                <li><em>Multiplicative:</em> Fitted = T &times; S (trend times seasonal ratio)</li>
+              </ul>
+              <p><strong>Step 4 &mdash; Residual:</strong></p>
+              <ul class="list-disc list-inside ml-2 space-y-0.5">
+                <li><em>Additive:</em> I = Y &minus; Fitted (in &euro;). Positive = actual was above model.</li>
+                <li><em>Multiplicative:</em> I = Y / Fitted (ratio). Shown as % deviation: (I &minus; 1) &times; 100. E.g., +3% means actual was 3% above what the model predicted.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER: Charts -->
+      <div class="lg:col-span-5 space-y-3">
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2" id="mainChartTitle">Monthly Revenue &mdash; Thessaloniki Palace Hotel</h3>
+          <div style="height: 420px;">
+            <canvas id="mainChart"></canvas>
+          </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2" id="residChartTitle">Residuals (Irregular Component)</h3>
+          <div style="height: 200px;">
+            <canvas id="residualChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Seasonal Indices + Interpretation -->
+      <div class="lg:col-span-4 space-y-3">
+
+        <!-- Seasonal Indices Chart -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-1" id="seasonalChartTitle">Seasonal Indices by Month</h3>
+          <p class="text-xs text-gray-400 mb-2" id="seasonalChartSub">How much each month deviates from the trend</p>
+          <div style="height: 220px;">
+            <canvas id="seasonalChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Residual Diagnostic Card -->
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+            <p class="text-xs text-gray-500 font-medium">Residual Std Dev</p>
+            <p class="text-lg font-bold text-gray-800 font-mono" id="residStdDev">--</p>
+          </div>
+          <div class="rounded-lg p-3 border text-center" id="patternCard" style="background:#f0fdf4; border-color:#bbf7d0;">
+            <p class="text-xs font-medium" id="patternLabel" style="color:#166534;">Residual Pattern</p>
+            <p class="text-lg font-bold" id="patternValue" style="color:#166534;">--</p>
+          </div>
+        </div>
+
+        <!-- Interpretation -->
+        <div class="rounded-xl shadow-md p-5 border-2" id="interpretationBox" style="border-color: #3b82f6; background-color: #eff6ff;">
+          <h3 class="text-base font-bold mb-2 flex items-center gap-2" id="interpTitle" style="color: #1e40af;">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Interpretation
+          </h3>
+          <p class="text-sm leading-relaxed" id="interpText" style="color: #1e3a5f;">Loading...</p>
+        </div>
+
+        <!-- The Lesson -->
+        <div class="bg-gray-800 rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-300 mb-2">The Rule of Thumb</h3>
+          <p class="text-white text-sm leading-relaxed">If the <strong>seasonal swings grow</strong> as the trend rises &rarr; <strong>multiplicative</strong>.<br>If swings stay <strong>roughly the same height</strong> &rarr; <strong>additive</strong>.</p>
+          <p class="text-gray-400 text-xs mt-2">Look at the raw data first. If the peaks get taller over time, you need the multiplicative model.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== SEEDED PRNG (Mulberry32) =====
+    function mulberry32(seed) {
+      return function() {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    function gaussianRandom(rng, stdev) {
+      const u1 = rng();
+      const u2 = rng();
+      return stdev * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    }
+
+    // ===== CONSTANTS =====
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const thessRevenues = HOTEL_DATA.map(d => d.revenue);
+    const labels = HOTEL_DATA.map(d => d.month);
+    const n = 60;
+
+    // ===== GENERATE BEACH RESORT DATA =====
+    // True multiplicative DGP: Y[t] = T[t] * S[month] * (1 + noise)
+    function generateBeachData() {
+      const rng = mulberry32(7);
+      const seasonalRatios = [0.40, 0.42, 0.62, 0.88, 1.18, 1.55, 1.72, 1.65, 1.22, 0.78, 0.45, 0.13];
+      const data = [];
+      for (let t = 0; t < 60; t++) {
+        const trend = 150000 + 5500 * t;
+        const seasonal = seasonalRatios[t % 12];
+        const noise = 1 + gaussianRandom(rng, 0.04);
+        data.push(Math.round(trend * seasonal * noise));
+      }
+      return data;
+    }
+
+    const beachRevenues = generateBeachData();
+
+    // ===== STATE =====
+    let currentDataset = 'thessaloniki';
+    let currentModel = 'additive';
+    let actuals = thessRevenues;
+
+    // ===== COMPUTATION =====
+
+    function computeCMA(data) {
+      const cma = new Array(n).fill(null);
+      const half = 6; // 12/2
+      const simpleMAs = [];
+      for (let i = 0; i <= n - 12; i++) {
+        let sum = 0;
+        for (let j = i; j < i + 12; j++) sum += data[j];
+        simpleMAs.push(sum / 12);
+      }
+      for (let i = 0; i < simpleMAs.length - 1; i++) {
+        cma[i + half] = (simpleMAs[i] + simpleMAs[i + 1]) / 2;
+      }
+      return cma;
+    }
+
+    function computeAdditiveIndices(data, cma) {
+      const detrended = data.map((r, i) => cma[i] !== null ? r - cma[i] : null);
+      const monthGroups = Array.from({ length: 12 }, () => []);
+      detrended.forEach((d, i) => { if (d !== null) monthGroups[i % 12].push(d); });
+      const rawIndices = monthGroups.map(g => g.length > 0 ? g.reduce((a, b) => a + b, 0) / g.length : 0);
+      const adj = rawIndices.reduce((a, b) => a + b, 0) / 12;
+      return rawIndices.map(idx => idx - adj);
+    }
+
+    function computeMultiplicativeIndices(data, cma) {
+      const ratios = data.map((r, i) => cma[i] !== null ? r / cma[i] : null);
+      const monthGroups = Array.from({ length: 12 }, () => []);
+      ratios.forEach((r, i) => { if (r !== null) monthGroups[i % 12].push(r); });
+      const rawIndices = monthGroups.map(g => g.length > 0 ? g.reduce((a, b) => a + b, 0) / g.length : 0);
+      const avg = rawIndices.reduce((a, b) => a + b, 0) / 12;
+      return rawIndices.map(idx => idx / avg);
+    }
+
+    function computeFitted(data, cma, indices, model) {
+      if (model === 'additive') {
+        return data.map((_, i) => cma[i] !== null ? cma[i] + indices[i % 12] : null);
+      } else {
+        return data.map((_, i) => cma[i] !== null ? cma[i] * indices[i % 12] : null);
+      }
+    }
+
+    function computeResiduals(data, fitted, model) {
+      return data.map((r, i) => {
+        if (fitted[i] === null) return null;
+        if (model === 'additive') return r - fitted[i];
+        else return (r / fitted[i] - 1) * 100; // % deviation
+      });
+    }
+
+    function stdDev(arr) {
+      const valid = arr.filter(v => v !== null);
+      if (valid.length < 2) return 0;
+      const mean = valid.reduce((a, b) => a + b, 0) / valid.length;
+      const variance = valid.reduce((a, v) => a + (v - mean) ** 2, 0) / (valid.length - 1);
+      return Math.sqrt(variance);
+    }
+
+    // Compute residual std dev for the last 24 months (for the comparison card)
+    function computeResidualSpreadLast24(data, model) {
+      const cma = computeCMA(data);
+      const indices = model === 'additive' ? computeAdditiveIndices(data, cma) : computeMultiplicativeIndices(data, cma);
+      const fitted = computeFitted(data, cma, indices, model);
+      const residuals = computeResiduals(data, fitted, model);
+      // Last 24 months: indices 36-59
+      const last24 = residuals.slice(36);
+      return stdDev(last24);
+    }
+
+    // ===== FULL COMPUTATION FOR CURRENT STATE =====
+    let cma, indices, fitted, residuals;
+
+    function recompute() {
+      cma = computeCMA(actuals);
+      indices = currentModel === 'additive' ? computeAdditiveIndices(actuals, cma) : computeMultiplicativeIndices(actuals, cma);
+      fitted = computeFitted(actuals, cma, indices, currentModel);
+      residuals = computeResiduals(actuals, fitted, currentModel);
+    }
+
+    recompute();
+
+    // ===== CHARTS =====
+
+    const mainCtx = document.getElementById('mainChart').getContext('2d');
+    const residCtx = document.getElementById('residualChart').getContext('2d');
+    const seasonalCtx = document.getElementById('seasonalChart').getContext('2d');
+
+    // --- Main chart ---
+    const mainChart = new Chart(mainCtx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Actual Revenue',
+            data: [...actuals],
+            borderColor: 'rgb(156, 163, 175)',
+            backgroundColor: 'rgba(156, 163, 175, 0.08)',
+            borderWidth: 3,
+            pointRadius: 2,
+            pointHoverRadius: 5,
+            tension: 0.1,
+            fill: true,
+            order: 2
+          },
+          {
+            label: 'Fitted (Model)',
+            data: fitted,
+            borderColor: 'rgb(16, 185, 129)',
+            borderWidth: 2,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            tension: 0.1,
+            fill: false,
+            order: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top', labels: { usePointStyle: true, font: { size: 12 } } },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                if (ctx.parsed.y === null) return null;
+                return ctx.dataset.label + ': \u20AC' + Math.round(ctx.parsed.y).toLocaleString();
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 12, font: { size: 11 } } },
+          y: {
+            title: { display: true, text: 'Revenue (\u20AC)', font: { size: 12 } },
+            ticks: { callback: function(v) { return '\u20AC' + (v / 1000).toFixed(0) + 'K'; }, font: { size: 11 } }
+          }
+        }
+      }
+    });
+
+    // --- Residual chart ---
+    function getResidualColors(resids) {
+      // Color based on absolute magnitude relative to the series
+      const valid = resids.filter(v => v !== null);
+      if (valid.length === 0) return resids.map(() => 'rgba(100,116,139,0.5)');
+      const maxAbs = Math.max(...valid.map(Math.abs));
+      return resids.map(v => {
+        if (v === null) return 'rgba(100,116,139,0.5)';
+        const intensity = Math.abs(v) / (maxAbs || 1);
+        if (intensity > 0.6) return 'rgba(239, 68, 68, 0.75)';  // red for large
+        if (intensity > 0.3) return 'rgba(251, 191, 36, 0.75)';  // amber for medium
+        return 'rgba(100, 116, 139, 0.55)';  // slate for small
+      });
+    }
+
+    const residualChart = new Chart(residCtx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Residual',
+          data: residuals,
+          backgroundColor: getResidualColors(residuals),
+          borderWidth: 0,
+          barPercentage: 1.0,
+          categoryPercentage: 1.0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                if (ctx.parsed.y === null) return null;
+                if (currentModel === 'additive') {
+                  const sign = ctx.parsed.y >= 0 ? '+' : '';
+                  return sign + '\u20AC' + Math.round(ctx.parsed.y).toLocaleString();
+                } else {
+                  const sign = ctx.parsed.y >= 0 ? '+' : '';
+                  return sign + ctx.parsed.y.toFixed(1) + '% from expected';
+                }
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 12, font: { size: 10 } } },
+          y: {
+            title: {
+              display: true,
+              text: currentModel === 'additive' ? 'Residual (\u20AC)' : 'Residual (%)',
+              font: { size: 11 }
+            },
+            ticks: {
+              callback: function(v) {
+                if (currentModel === 'additive') return (v >= 0 ? '+' : '') + '\u20AC' + (v / 1000).toFixed(0) + 'K';
+                else return (v >= 0 ? '+' : '') + v.toFixed(0) + '%';
+              },
+              font: { size: 10 }
+            },
+            grid: {
+              color: function(ctx) { return ctx.tick.value === 0 ? '#374151' : '#e5e7eb'; },
+              lineWidth: function(ctx) { return ctx.tick.value === 0 ? 2 : 1; }
+            }
+          }
+        }
+      }
+    });
+
+    // --- Seasonal indices chart ---
+    const barLabelPlugin = {
+      id: 'barLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        const meta = chart.getDatasetMeta(0);
+        const dataset = chart.data.datasets[0];
+        meta.data.forEach((bar, i) => {
+          const value = dataset.data[i];
+          if (value === null || value === undefined) return;
+          ctx.save();
+          ctx.font = 'bold 10px system-ui, sans-serif';
+          ctx.textAlign = 'center';
+
+          if (currentModel === 'additive') {
+            ctx.fillStyle = value >= 0 ? '#166534' : '#991b1b';
+            const sign = value >= 0 ? '+' : '';
+            const label = sign + '\u20AC' + Math.round(value / 1000) + 'K';
+            const yPos = value >= 0 ? bar.y - 6 : bar.y + 14;
+            ctx.fillText(label, bar.x, yPos);
+          } else {
+            ctx.fillStyle = value >= 1 ? '#166534' : '#991b1b';
+            const label = value.toFixed(2) + '\u00D7';
+            const yPos = value >= 1 ? bar.y - 6 : bar.y + 14;
+            ctx.fillText(label, bar.x, yPos);
+          }
+          ctx.restore();
+        });
+      }
+    };
+
+    function getSeasonalBarColors(vals) {
+      if (currentModel === 'additive') {
+        return {
+          bg: vals.map(v => v >= 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
+          border: vals.map(v => v >= 0 ? 'rgb(22, 163, 74)' : 'rgb(220, 38, 38)')
+        };
+      } else {
+        return {
+          bg: vals.map(v => v >= 1 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
+          border: vals.map(v => v >= 1 ? 'rgb(22, 163, 74)' : 'rgb(220, 38, 38)')
+        };
+      }
+    }
+
+    const seasonalColors = getSeasonalBarColors(indices);
+    const seasonalChart = new Chart(seasonalCtx, {
+      type: 'bar',
+      data: {
+        labels: MONTH_NAMES,
+        datasets: [{
+          label: 'Seasonal Index',
+          data: indices,
+          backgroundColor: seasonalColors.bg,
+          borderColor: seasonalColors.border,
+          borderWidth: 2,
+          borderRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                const v = ctx.parsed.y;
+                if (currentModel === 'additive') {
+                  const sign = v >= 0 ? '+' : '';
+                  return sign + '\u20AC' + Math.round(v).toLocaleString() + ' vs trend';
+                } else {
+                  return v.toFixed(3) + '\u00D7 trend';
+                }
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { size: 11 } } },
+          y: {
+            title: { display: true, text: 'Index (\u20AC)', font: { size: 11 } },
+            ticks: {
+              callback: function(v) {
+                if (currentModel === 'additive') return (v >= 0 ? '+' : '') + '\u20AC' + (v / 1000).toFixed(0) + 'K';
+                else return v.toFixed(1) + '\u00D7';
+              },
+              font: { size: 10 }
+            },
+            grid: {
+              color: function(ctx) {
+                const baseline = currentModel === 'additive' ? 0 : 1;
+                return Math.abs(ctx.tick.value - baseline) < 0.001 ? '#374151' : '#e5e7eb';
+              },
+              lineWidth: function(ctx) {
+                const baseline = currentModel === 'additive' ? 0 : 1;
+                return Math.abs(ctx.tick.value - baseline) < 0.001 ? 2 : 1;
+              }
+            }
+          }
+        }
+      },
+      plugins: [barLabelPlugin]
+    });
+
+    // ===== UPDATE =====
+
+    function update() {
+      recompute();
+
+      // Main chart
+      mainChart.data.datasets[0].data = [...actuals];
+      mainChart.data.datasets[1].data = fitted;
+      mainChart.data.datasets[1].label = currentModel === 'additive' ? 'Fitted (T + S)' : 'Fitted (T \u00D7 S)';
+      mainChart.update();
+
+      // Residual chart
+      residualChart.data.datasets[0].data = residuals;
+      residualChart.data.datasets[0].backgroundColor = getResidualColors(residuals);
+      residualChart.options.scales.y.title.text = currentModel === 'additive' ? 'Residual (\u20AC)' : 'Residual (%)';
+      residualChart.update();
+
+      // Seasonal chart
+      const sColors = getSeasonalBarColors(indices);
+      seasonalChart.data.datasets[0].data = indices;
+      seasonalChart.data.datasets[0].backgroundColor = sColors.bg;
+      seasonalChart.data.datasets[0].borderColor = sColors.border;
+      seasonalChart.options.scales.y.title.text = currentModel === 'additive' ? 'Index (\u20AC)' : 'Index (ratio)';
+      seasonalChart.update();
+
+      // UI labels
+      updateLabels();
+      updateResidualDiagnostics();
+      updateSummaryCard();
+      updateInterpretation();
+    }
+
+    function updateLabels() {
+      const datasetName = currentDataset === 'thessaloniki' ? 'Thessaloniki Palace Hotel' : 'Beach Resort (Synthetic)';
+      document.getElementById('mainChartTitle').textContent = 'Monthly Revenue \u2014 ' + datasetName;
+      document.getElementById('residChartTitle').textContent = currentModel === 'additive'
+        ? 'Residuals \u2014 Additive (in \u20AC)'
+        : 'Residuals \u2014 Multiplicative (% deviation)';
+      document.getElementById('seasonalChartTitle').textContent = currentModel === 'additive'
+        ? 'Seasonal Indices (\u20AC above/below trend)'
+        : 'Seasonal Indices (ratio of trend)';
+      document.getElementById('seasonalChartSub').textContent = currentModel === 'additive'
+        ? 'Fixed euro amount each month adds or subtracts'
+        : 'Each month multiplies the trend by this ratio';
+    }
+
+    function updateResidualDiagnostics() {
+      const validResids = residuals.filter(v => v !== null);
+      const sd = stdDev(validResids);
+
+      if (currentModel === 'additive') {
+        document.getElementById('residStdDev').textContent = '\u20AC' + Math.round(sd).toLocaleString();
+      } else {
+        document.getElementById('residStdDev').textContent = sd.toFixed(1) + '%';
+      }
+
+      // Check for fan pattern: compare std dev of first half vs second half of valid residuals
+      const firstHalf = [];
+      const secondHalf = [];
+      let validCount = 0;
+      for (let i = 0; i < n; i++) {
+        if (residuals[i] !== null) {
+          if (validCount < Math.floor(residuals.filter(v => v !== null).length / 2)) {
+            firstHalf.push(residuals[i]);
+          } else {
+            secondHalf.push(residuals[i]);
+          }
+          validCount++;
+        }
+      }
+      const sdFirst = stdDev(firstHalf);
+      const sdSecond = stdDev(secondHalf);
+      const ratio = sdFirst > 0 ? sdSecond / sdFirst : 1;
+
+      const card = document.getElementById('patternCard');
+      const label = document.getElementById('patternLabel');
+      const value = document.getElementById('patternValue');
+
+      if (ratio > 1.8) {
+        card.style.background = '#fef2f2';
+        card.style.borderColor = '#fecaca';
+        label.style.color = '#991b1b';
+        value.style.color = '#991b1b';
+        value.textContent = 'Fan shape';
+      } else if (ratio > 1.3) {
+        card.style.background = '#fffbeb';
+        card.style.borderColor = '#fef3c7';
+        label.style.color = '#92400e';
+        value.style.color = '#92400e';
+        value.textContent = 'Mild pattern';
+      } else {
+        card.style.background = '#f0fdf4';
+        card.style.borderColor = '#bbf7d0';
+        label.style.color = '#166534';
+        value.style.color = '#166534';
+        value.textContent = 'Random';
+      }
+    }
+
+    function updateSummaryCard() {
+      const addSpread = computeResidualSpreadLast24(actuals, 'additive');
+      const multSpread = computeResidualSpreadLast24(actuals, 'multiplicative');
+
+      document.getElementById('addSpread').textContent = '\u20AC' + Math.round(addSpread).toLocaleString();
+      document.getElementById('multSpread').textContent = multSpread.toFixed(1) + '%';
+
+      // For comparison, normalise: compute coefficient of variation for additive
+      // (std dev / mean of last 24 actuals) vs multiplicative spread directly
+      const last24 = actuals.slice(36);
+      const meanLast24 = last24.reduce((a, b) => a + b, 0) / last24.length;
+      const addCV = (addSpread / meanLast24) * 100; // as percentage
+
+      const card = document.getElementById('summaryCard');
+      const verdict = document.getElementById('spreadVerdict');
+
+      if (addCV <= multSpread * 1.1) {
+        // Additive is comparable or better
+        card.style.borderColor = '#22c55e';
+        card.style.background = '#f0fdf4';
+        verdict.textContent = 'Both models produce similar residuals';
+        verdict.style.color = '#166534';
+      } else {
+        // Multiplicative is clearly better
+        const improvement = ((addCV - multSpread) / addCV * 100).toFixed(0);
+        card.style.borderColor = '#8b5cf6';
+        card.style.background = '#f5f3ff';
+        verdict.innerHTML = 'Multiplicative residuals are <strong>' + improvement + '% tighter</strong>';
+        verdict.style.color = '#5b21b6';
+      }
+    }
+
+    function updateInterpretation() {
+      const box = document.getElementById('interpretationBox');
+      const title = document.getElementById('interpTitle');
+      const text = document.getElementById('interpText');
+
+      let message = '';
+
+      if (currentDataset === 'thessaloniki' && currentModel === 'additive') {
+        box.style.borderColor = '#3b82f6'; box.style.backgroundColor = '#eff6ff';
+        title.style.color = '#1e40af'; text.style.color = '#1e3a5f';
+        title.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Good Fit';
+        message = 'Both models work here. Seasonal swings are roughly constant (~\u20AC180K peak-to-trough each year). The additive model fits well \u2014 the green dashed line closely tracks the grey actuals, and the residuals look random with no obvious pattern. <br><br><strong>Additive indices in euros make intuitive sense:</strong> "July adds about +\u20AC108K above the trend." This is the standard decomposition you learned in class.';
+      } else if (currentDataset === 'thessaloniki' && currentModel === 'multiplicative') {
+        box.style.borderColor = '#3b82f6'; box.style.backgroundColor = '#eff6ff';
+        title.style.color = '#1e40af'; text.style.color = '#1e3a5f';
+        title.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Also Works Fine';
+        message = 'Also works fine. Seasonal indices as ratios (e.g., July = 1.32\u00D7 trend) are equivalent here since the trend growth is modest. The fitted line looks nearly identical to the additive version.<br><br><strong>When swings are stable, either model is adequate.</strong> The additive model is simpler and more intuitive for this dataset. You would choose multiplicative only if the data showed growing seasonal swings.';
+      } else if (currentDataset === 'beach' && currentModel === 'additive') {
+        box.style.borderColor = '#dc2626'; box.style.backgroundColor = '#fef2f2';
+        title.style.color = '#991b1b'; text.style.color = '#450a0a';
+        title.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg> Model Mismatch!';
+        message = '<strong>Notice the residuals fan out</strong> \u2014 errors are small in early years but get much larger in recent years. The additive model assumes a fixed \u20AC swing each month (e.g., "July is always +\u20ACX above trend"), but this resort\'s peaks are <em>growing</em> as revenue rises.<br><br>The additive seasonal index underestimates recent peaks and overestimates early ones. <strong>This is the classic sign that you need the multiplicative model.</strong>';
+      } else if (currentDataset === 'beach' && currentModel === 'multiplicative') {
+        box.style.borderColor = '#16a34a'; box.style.backgroundColor = '#f0fdf4';
+        title.style.color = '#166534'; text.style.color = '#14532d';
+        title.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Correct Model';
+        message = 'Residuals are uniform now. The multiplicative model captures that July is always ~1.72\u00D7 the trend, whether the trend is \u20AC200K or \u20AC475K. The seasonal swing <em>scales</em> with the level.<br><br><strong>This is the key insight:</strong> when a resort grows, its seasonal peaks grow too. A hotel earning twice as much in trend will have summer peaks that are twice as large in absolute euros \u2014 but the <em>ratio</em> stays the same. That\'s what multiplicative indices capture.';
+      }
+
+      text.innerHTML = message;
+    }
+
+    // ===== DATASET / MODEL SWITCHING =====
+
+    function switchDataset(ds) {
+      if (ds === currentDataset) return;
+      currentDataset = ds;
+      actuals = ds === 'thessaloniki' ? thessRevenues : beachRevenues;
+
+      // Toggle button styles
+      if (ds === 'thessaloniki') {
+        document.getElementById('btnThess').className = 'toggle-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-blue-400 bg-blue-50 text-blue-900 font-semibold';
+        document.getElementById('btnBeach').className = 'toggle-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-gray-200 bg-white text-gray-600';
+      } else {
+        document.getElementById('btnThess').className = 'toggle-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-gray-200 bg-white text-gray-600';
+        document.getElementById('btnBeach').className = 'toggle-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-orange-400 bg-orange-50 text-orange-900 font-semibold';
+      }
+
+      update();
+    }
+
+    function switchModel(model) {
+      if (model === currentModel) return;
+      currentModel = model;
+
+      if (model === 'additive') {
+        document.getElementById('btnAdditive').className = 'toggle-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-green-400 bg-green-50 text-green-900 font-semibold';
+        document.getElementById('btnMultiplicative').className = 'toggle-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-gray-200 bg-white text-gray-600';
+      } else {
+        document.getElementById('btnAdditive').className = 'toggle-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-gray-200 bg-white text-gray-600';
+        document.getElementById('btnMultiplicative').className = 'toggle-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-purple-400 bg-purple-50 text-purple-900 font-semibold';
+      }
+
+      update();
+    }
+
+    // ===== INITIALIZE =====
+    update();
+  </script>
+</body>
+</html>

@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smoothing Constant Explorer | BDDM Session 4</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/data.js"></script>
+  <style>
+    .preset-btn { transition: all 0.15s ease; }
+    .preset-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .metric-card { transition: background-color 0.3s ease; }
+    #interpretationBox { transition: background-color 0.3s ease, border-color 0.3s ease; }
+    input[type="range"] { -webkit-appearance: none; height: 8px; border-radius: 4px; background: #e5e7eb; outline: none; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: #3b82f6; cursor: pointer; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+    input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%; background: #3b82f6; cursor: pointer; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+    .dataset-btn { transition: all 0.15s ease; cursor: pointer; }
+    .dataset-btn:hover { transform: translateY(-1px); }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Navigation -->
+  <nav class="bg-white shadow-sm border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 py-3">
+      <div class="flex flex-wrap items-center gap-4">
+        <span class="font-bold text-gray-800">Session 4 Tools</span>
+        <div class="flex flex-wrap gap-2 text-sm">
+          <a href="index.html" class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition">Home</a>
+          <a href="decomposition-explorer.html" class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition">Decomposition</a>
+          <a href="smoothing-explorer.html" class="px-3 py-1 rounded-full bg-teal-600 text-white font-medium">Smoothing</a>
+          <a href="seasonality-models.html" class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition">Seasonality Models</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto p-4">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-4">
+      <h1 class="text-2xl font-bold text-gray-800 mb-1">Smoothing Constant Explorer</h1>
+      <p class="text-gray-600" id="headerDesc">Drag the alpha slider to see how Simple Exponential Smoothing (SES) reacts to this hotel's seasonal revenue data.</p>
+    </div>
+
+    <!-- Activity Box -->
+    <div class="bg-blue-50 border-2 border-blue-300 rounded-lg shadow-sm p-5 mb-4">
+      <h2 class="text-lg font-bold text-blue-800 mb-3 flex items-center gap-2">
+        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        Activity: When does SES work?
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm text-blue-900">
+        <div class="flex gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">1</span>
+          <p><strong>Set alpha to 0.1.</strong> Notice how flat the blue forecast line is. It barely reacts to seasonal peaks. Read the MAPE.</p>
+        </div>
+        <div class="flex gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">2</span>
+          <p><strong>Drag alpha to 0.9.</strong> Watch the forecast chase the actual data but always arrive one month late. Read the MAPE.</p>
+        </div>
+        <div class="flex gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">3</span>
+          <p><strong>Find the alpha that gives the lowest MAPE.</strong> Is it closer to 0.1 or 0.9? Why?</p>
+        </div>
+        <div class="flex gap-3">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">4</span>
+          <p><strong>Look at the orange benchmark line.</strong> Does ANY alpha beat the naive seasonal forecast? What does this tell you about SES and seasonal data?</p>
+        </div>
+        <div class="flex gap-3 md:col-span-2 bg-blue-100 rounded-lg p-3 mt-1">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm">5</span>
+          <p><strong>Switch to "Non-Seasonal Example."</strong> Try &alpha; = 0.3 again. Does SES beat the benchmark now? What changed?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+      <!-- LEFT: Controls -->
+      <div class="lg:col-span-3 space-y-3">
+
+        <!-- Dataset Toggle -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Dataset</h3>
+          <div class="space-y-2">
+            <button id="btnSeasonal" onclick="switchDataset('seasonal')" class="dataset-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-orange-400 bg-orange-50 text-orange-900 font-semibold">
+              <span class="font-bold">Hotel Revenue</span>
+              <span class="block text-xs opacity-75">Seasonal &mdash; strong summer peaks</span>
+            </button>
+            <button id="btnNonseasonal" onclick="switchDataset('nonseasonal')" class="dataset-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-gray-200 bg-white text-gray-600">
+              <span class="font-bold">Non-Seasonal Example</span>
+              <span class="block text-xs opacity-75">Steady trend &mdash; no seasonal pattern</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- SES Formula -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">The SES Formula</h3>
+          <div class="bg-gray-50 rounded-lg p-3 text-center font-mono text-sm">
+            <p>F<sub>next</sub> = <span class="text-blue-600 font-bold">&alpha;</span> &times; Actual + (1 &minus; <span class="text-blue-600 font-bold">&alpha;</span>) &times; F<sub>prev</sub></p>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">A blend of what happened and what you predicted. Alpha controls the mix.</p>
+        </div>
+
+        <!-- Alpha Slider -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Smoothing Constant (&alpha;)</h3>
+          <div class="text-center mb-3">
+            <span class="text-4xl font-bold text-blue-600" id="alphaDisplay">0.30</span>
+          </div>
+          <input type="range" id="alphaSlider" min="0.05" max="0.95" step="0.05" value="0.30" class="w-full mb-2">
+          <div class="flex justify-between text-xs text-gray-400">
+            <span>0.05</span>
+            <span>0.50</span>
+            <span>0.95</span>
+          </div>
+
+          <!-- Character indicator -->
+          <div class="mt-3 text-center py-2 rounded-lg font-semibold text-sm" id="characterBadge" style="background:#eff6ff; color:#1e40af;">
+            Balanced
+          </div>
+        </div>
+
+        <!-- Preset Buttons -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Quick Presets</h3>
+          <div class="space-y-2">
+            <button onclick="setAlpha(0.1)" class="preset-btn w-full text-sm bg-blue-50 hover:bg-blue-100 text-blue-800 py-2 px-3 rounded-lg border border-blue-200 text-left">
+              <span class="font-bold">&alpha; = 0.1</span>
+              <span class="block text-xs text-blue-600">Conservative &mdash; trusts history</span>
+            </button>
+            <button onclick="setAlpha(0.3)" class="preset-btn w-full text-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-800 py-2 px-3 rounded-lg border border-indigo-200 text-left">
+              <span class="font-bold">&alpha; = 0.3</span>
+              <span class="block text-xs text-indigo-600">Balanced &mdash; moderate blend</span>
+            </button>
+            <button onclick="setAlpha(0.9)" class="preset-btn w-full text-sm bg-red-50 hover:bg-red-100 text-red-800 py-2 px-3 rounded-lg border border-red-200 text-left">
+              <span class="font-bold">&alpha; = 0.9</span>
+              <span class="block text-xs text-red-600">Aggressive &mdash; trusts last month</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Excel note -->
+        <div class="bg-amber-50 rounded-lg shadow-sm p-3 border border-amber-200">
+          <p class="text-xs text-amber-800"><strong>Excel ToolPak Warning:</strong> Excel asks for "Damping factor" = 1 &minus; &alpha;. If you want &alpha; = 0.3, enter <strong>0.7</strong> as damping.</p>
+        </div>
+      </div>
+
+      <!-- CENTER: Chart -->
+      <div class="lg:col-span-5 space-y-3">
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2" id="chartTitle">Actual Revenue vs. SES Forecast</h3>
+          <div style="height: 420px;">
+            <canvas id="sesChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Metrics + Interpretation -->
+      <div class="lg:col-span-4 space-y-3">
+
+        <!-- Metrics Dashboard -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-3">Forecast Accuracy</h3>
+          <div class="space-y-2">
+            <!-- SES MAPE -->
+            <div class="metric-card rounded-lg p-3" id="mapeCard" style="background:#eff6ff;">
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-600">SES MAPE</span>
+                <span class="text-2xl font-bold" id="sesMAPE" style="color:#1e40af;">--</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div class="h-2 rounded-full" id="mapeBar" style="width:50%; background:#3b82f6;"></div>
+              </div>
+            </div>
+
+            <!-- SES MAE -->
+            <div class="metric-card rounded-lg p-3 bg-gray-50">
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-600">SES MAE</span>
+                <span class="text-lg font-bold text-gray-700" id="sesMAE">--</span>
+              </div>
+            </div>
+
+            <!-- Benchmark -->
+            <div class="rounded-lg p-3 bg-orange-50 border border-orange-200">
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-orange-700 font-medium" id="benchmarkLabel">Naive Seasonal MAPE</span>
+                <span class="text-lg font-bold text-orange-700" id="naiveMAPE">--</span>
+              </div>
+              <p class="text-xs text-orange-600 mt-1" id="benchmarkDesc">Benchmark: same month last year</p>
+            </div>
+
+            <!-- Verdict -->
+            <div class="rounded-lg p-3 border-2 text-center" id="verdictCard" style="border-color:#dc2626; background:#fef2f2;">
+              <p class="text-sm font-bold" id="verdictText" style="color:#991b1b;">--</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- The Lesson -->
+        <div class="bg-gray-800 rounded-lg shadow-sm p-4 text-center">
+          <h3 class="text-sm font-semibold text-gray-300 mb-2">The Lesson</h3>
+          <p class="text-white text-sm leading-relaxed" id="lessonMain">SES has <strong>1 number</strong> (the level). It doesn't know what month it is.</p>
+          <p class="text-gray-400 text-xs mt-2" id="lessonSub">Decomposition has <strong>14 numbers</strong>: trend level + 12 monthly indices. More structure = better forecasts.</p>
+        </div>
+
+        <!-- Interpretation -->
+        <div class="rounded-xl shadow-md p-5 border-2" id="interpretationBox" style="border-color: #0d9488; background-color: #f0fdfa;">
+          <h3 class="text-base font-bold mb-2 flex items-center gap-2" id="interpTitle" style="color: #134e4a;">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            What's happening?
+          </h3>
+          <p class="text-sm leading-relaxed" id="interpText" style="color: #134e4a;">Loading...</p>
+        </div>
+
+        <!-- Key Terms -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Key Terms</h3>
+          <div class="text-xs text-gray-600 space-y-2">
+            <div>
+              <p class="font-semibold text-gray-800">SES (Simple Exponential Smoothing)</p>
+              <p>A forecasting method that blends the last actual value with the previous forecast. Assigns exponentially decreasing weights to older observations.</p>
+            </div>
+            <div>
+              <p class="font-semibold text-gray-800">Alpha (&alpha;) &mdash; Smoothing Constant</p>
+              <p>Controls reactivity. High &alpha; (near 1) trusts recent data more. Low &alpha; (near 0) trusts history more. Range: 0 &lt; &alpha; &lt; 1.</p>
+            </div>
+            <div>
+              <p class="font-semibold text-gray-800">MAPE (Mean Absolute Percentage Error)</p>
+              <p>Average of |Actual &minus; Forecast| / Actual &times; 100. Lower is better. Industry standard for tourism forecasting.</p>
+            </div>
+            <div>
+              <p class="font-semibold text-gray-800">Naive Forecast</p>
+              <p>The simplest possible baseline. For seasonal data: same month last year. For non-seasonal data: last month's value. Any method must beat this to justify its complexity.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== SEEDED PRNG (Mulberry32) =====
+    function mulberry32(seed) {
+      return function() {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    function gaussianRandom(rng, stdev) {
+      const u1 = rng();
+      const u2 = rng();
+      return stdev * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    }
+
+    // ===== GENERATE NON-SEASONAL DATA =====
+    function generateNonSeasonalData() {
+      const rng = mulberry32(42);
+      const data = [];
+      for (let t = 0; t < 60; t++) {
+        const trend = 300000 + 1500 * t;
+        const noise = gaussianRandom(rng, 18000);
+        data.push(Math.round(trend + noise));
+      }
+      return data;
+    }
+
+    // ===== DATA =====
+    const seasonalRevenues = HOTEL_DATA.map(d => d.revenue);
+    const nonseasonalRevenues = generateNonSeasonalData();
+    const labels = HOTEL_DATA.map(d => d.month);
+    const n = 60;
+
+    // ===== COMPUTATION =====
+
+    function computeSES(data, alpha) {
+      const forecast = new Array(n).fill(null);
+      forecast[0] = data[0];
+      for (let i = 1; i < n; i++) {
+        forecast[i] = alpha * data[i - 1] + (1 - alpha) * forecast[i - 1];
+      }
+      return forecast;
+    }
+
+    function computeNaiveSeasonal(data) {
+      const forecast = new Array(n).fill(null);
+      for (let i = 12; i < n; i++) {
+        forecast[i] = data[i - 12];
+      }
+      return forecast;
+    }
+
+    function computeNaiveLastValue(data) {
+      const forecast = new Array(n).fill(null);
+      for (let i = 1; i < n; i++) {
+        forecast[i] = data[i - 1];
+      }
+      return forecast;
+    }
+
+    function computeMAPE(actuals, forecasts) {
+      let sum = 0, count = 0;
+      for (let i = 0; i < actuals.length; i++) {
+        if (forecasts[i] !== null && actuals[i] > 0) {
+          sum += Math.abs(actuals[i] - forecasts[i]) / actuals[i];
+          count++;
+        }
+      }
+      return count > 0 ? (sum / count) * 100 : null;
+    }
+
+    function computeMAE(actuals, forecasts) {
+      let sum = 0, count = 0;
+      for (let i = 0; i < actuals.length; i++) {
+        if (forecasts[i] !== null) {
+          sum += Math.abs(actuals[i] - forecasts[i]);
+          count++;
+        }
+      }
+      return count > 0 ? sum / count : null;
+    }
+
+    function computeMAPERange(actuals, forecasts, startIdx) {
+      let sum = 0, count = 0;
+      for (let i = startIdx; i < actuals.length; i++) {
+        if (forecasts[i] !== null && actuals[i] > 0) {
+          sum += Math.abs(actuals[i] - forecasts[i]) / actuals[i];
+          count++;
+        }
+      }
+      return count > 0 ? (sum / count) * 100 : null;
+    }
+
+    // ===== STATE =====
+    let currentAlpha = 0.30;
+    let currentDataset = 'seasonal';
+    let actuals = seasonalRevenues;
+    let benchmarkForecast = computeNaiveSeasonal(actuals);
+    let benchmarkStartIdx = 12;
+    let benchmarkMAPE = computeMAPERange(actuals, benchmarkForecast, benchmarkStartIdx);
+
+    // ===== CHART =====
+
+    const ctx = document.getElementById('sesChart').getContext('2d');
+    let sesForecast = computeSES(actuals, currentAlpha);
+
+    const sesChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Actual Revenue',
+            data: [...actuals],
+            borderColor: 'rgb(55, 65, 81)',
+            backgroundColor: 'rgba(55, 65, 81, 0.05)',
+            borderWidth: 3,
+            pointRadius: 2,
+            pointHoverRadius: 5,
+            tension: 0.1,
+            fill: true,
+            order: 2
+          },
+          {
+            label: 'SES Forecast',
+            data: sesForecast,
+            borderColor: 'rgb(59, 130, 246)',
+            borderWidth: 3,
+            borderDash: [8, 4],
+            pointRadius: 0,
+            tension: 0.1,
+            fill: false,
+            order: 1
+          },
+          {
+            label: 'Naive Seasonal',
+            data: benchmarkForecast,
+            borderColor: 'rgba(249, 115, 22, 0.5)',
+            borderWidth: 2,
+            borderDash: [3, 3],
+            pointRadius: 0,
+            tension: 0.1,
+            fill: false,
+            order: 3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { usePointStyle: true, font: { size: 12 } }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                if (ctx.parsed.y === null) return null;
+                return ctx.dataset.label + ': \u20AC' + Math.round(ctx.parsed.y).toLocaleString();
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              maxRotation: 45,
+              autoSkip: true,
+              maxTicksLimit: 12,
+              font: { size: 11 }
+            }
+          },
+          y: {
+            title: { display: true, text: 'Revenue (\u20AC)', font: { size: 12 } },
+            ticks: {
+              callback: function(v) { return '\u20AC' + (v / 1000).toFixed(0) + 'K'; },
+              font: { size: 11 }
+            }
+          }
+        }
+      }
+    });
+
+    // ===== DATASET SWITCHING =====
+
+    function switchDataset(mode) {
+      if (mode === currentDataset) return;
+      currentDataset = mode;
+
+      if (mode === 'seasonal') {
+        actuals = seasonalRevenues;
+        benchmarkForecast = computeNaiveSeasonal(actuals);
+        benchmarkStartIdx = 12;
+        benchmarkMAPE = computeMAPERange(actuals, benchmarkForecast, benchmarkStartIdx);
+
+        // UI labels
+        document.getElementById('benchmarkLabel').textContent = 'Naive Seasonal MAPE';
+        document.getElementById('benchmarkDesc').textContent = 'Benchmark: same month last year';
+        document.getElementById('chartTitle').textContent = 'Actual Revenue vs. SES Forecast';
+        document.getElementById('headerDesc').textContent = "Drag the alpha slider to see how Simple Exponential Smoothing (SES) reacts to this hotel's seasonal revenue data.";
+        sesChart.data.datasets[0].label = 'Actual Revenue';
+        sesChart.data.datasets[2].label = 'Naive Seasonal';
+
+        // Lesson card
+        document.getElementById('lessonMain').innerHTML = 'SES has <strong>1 number</strong> (the level). It doesn\'t know what month it is.';
+        document.getElementById('lessonSub').innerHTML = 'Decomposition has <strong>14 numbers</strong>: trend level + 12 monthly indices. More structure = better forecasts.';
+
+        // Toggle buttons
+        document.getElementById('btnSeasonal').className = 'dataset-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-orange-400 bg-orange-50 text-orange-900 font-semibold';
+        document.getElementById('btnNonseasonal').className = 'dataset-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-gray-200 bg-white text-gray-600';
+      } else {
+        actuals = nonseasonalRevenues;
+        benchmarkForecast = computeNaiveLastValue(actuals);
+        benchmarkStartIdx = 1;
+        benchmarkMAPE = computeMAPERange(actuals, benchmarkForecast, benchmarkStartIdx);
+
+        // UI labels
+        document.getElementById('benchmarkLabel').textContent = 'Naive (Last Value) MAPE';
+        document.getElementById('benchmarkDesc').textContent = 'Benchmark: last month\u2019s value';
+        document.getElementById('chartTitle').textContent = 'Non-Seasonal Revenue vs. SES Forecast';
+        document.getElementById('headerDesc').textContent = 'Now try SES on data with NO seasonal pattern \u2014 just a gentle upward trend with random fluctuation.';
+        sesChart.data.datasets[0].label = 'Actual Revenue';
+        sesChart.data.datasets[2].label = 'Naive (Last Value)';
+
+        // Lesson card
+        document.getElementById('lessonMain').innerHTML = 'When data has <strong>no seasonal pattern</strong>, SES\u2019s simplicity is a strength \u2014 it smoothly tracks the underlying level.';
+        document.getElementById('lessonSub').innerHTML = 'Method choice depends on <strong>data structure</strong>. Match the method to the pattern.';
+
+        // Toggle buttons
+        document.getElementById('btnSeasonal').className = 'dataset-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-gray-200 bg-white text-gray-600';
+        document.getElementById('btnNonseasonal').className = 'dataset-btn w-full text-sm py-2 px-3 rounded-lg border-2 text-left border-teal-400 bg-teal-50 text-teal-900 font-semibold';
+      }
+
+      // Update chart data
+      sesChart.data.datasets[0].data = [...actuals];
+      sesChart.data.datasets[2].data = benchmarkForecast;
+      update();
+    }
+
+    // ===== UPDATE =====
+
+    function update() {
+      sesForecast = computeSES(actuals, currentAlpha);
+
+      // Update chart
+      sesChart.data.datasets[1].data = sesForecast;
+      sesChart.update();
+
+      // Compute metrics (start index depends on benchmark type)
+      const sesMAPEval = computeMAPERange(actuals, sesForecast, benchmarkStartIdx);
+      const sesMAEval = computeMAE(
+        actuals.slice(benchmarkStartIdx),
+        sesForecast.slice(benchmarkStartIdx)
+      );
+
+      // Update displays
+      document.getElementById('alphaDisplay').textContent = currentAlpha.toFixed(2);
+      document.getElementById('sesMAPE').textContent = sesMAPEval.toFixed(1) + '%';
+      document.getElementById('sesMAE').textContent = '\u20AC' + Math.round(sesMAEval).toLocaleString();
+      document.getElementById('naiveMAPE').textContent = benchmarkMAPE.toFixed(1) + '%';
+
+      // MAPE bar (scale: 0-30%)
+      const barWidth = Math.min(100, (sesMAPEval / 30) * 100);
+      const mapeBar = document.getElementById('mapeBar');
+      mapeBar.style.width = barWidth + '%';
+
+      // Color-code MAPE
+      const mapeCard = document.getElementById('mapeCard');
+      const mapeText = document.getElementById('sesMAPE');
+      if (sesMAPEval <= 10) {
+        mapeCard.style.background = '#f0fdf4'; mapeText.style.color = '#166534'; mapeBar.style.background = '#22c55e';
+      } else if (sesMAPEval <= 20) {
+        mapeCard.style.background = '#fffbeb'; mapeText.style.color = '#92400e'; mapeBar.style.background = '#f59e0b';
+      } else {
+        mapeCard.style.background = '#fef2f2'; mapeText.style.color = '#991b1b'; mapeBar.style.background = '#ef4444';
+      }
+
+      // Verdict
+      const verdictCard = document.getElementById('verdictCard');
+      const verdictText = document.getElementById('verdictText');
+      if (sesMAPEval < benchmarkMAPE) {
+        verdictCard.style.borderColor = '#16a34a'; verdictCard.style.background = '#f0fdf4';
+        verdictText.style.color = '#166534';
+        const gap = (benchmarkMAPE - sesMAPEval).toFixed(1);
+        verdictText.textContent = `SES BEATS the naive baseline by ${gap} pp!`;
+      } else {
+        verdictCard.style.borderColor = '#dc2626'; verdictCard.style.background = '#fef2f2';
+        verdictText.style.color = '#991b1b';
+        const gap = (sesMAPEval - benchmarkMAPE).toFixed(1);
+        if (currentDataset === 'seasonal') {
+          verdictText.textContent = `SES LOSES to naive seasonal by ${gap} pp`;
+        } else {
+          verdictText.textContent = `SES LOSES to naive by ${gap} pp`;
+        }
+      }
+
+      // Character badge
+      updateCharacter();
+
+      // Interpretation
+      updateInterpretation(sesMAPEval);
+    }
+
+    function updateCharacter() {
+      const badge = document.getElementById('characterBadge');
+      if (currentAlpha < 0.2) {
+        badge.textContent = 'Conservative \u2014 trusts history';
+        badge.style.background = '#dbeafe'; badge.style.color = '#1e40af';
+      } else if (currentAlpha <= 0.5) {
+        badge.textContent = 'Balanced';
+        badge.style.background = '#ede9fe'; badge.style.color = '#5b21b6';
+      } else {
+        badge.textContent = 'Aggressive \u2014 trusts last month';
+        badge.style.background = '#fee2e2'; badge.style.color = '#991b1b';
+      }
+    }
+
+    function updateInterpretation(sesMAPEval) {
+      const box = document.getElementById('interpretationBox');
+      const text = document.getElementById('interpText');
+      const title = document.getElementById('interpTitle');
+
+      let message = '';
+
+      if (currentDataset === 'seasonal') {
+        // === SEASONAL INTERPRETATION ===
+        if (currentAlpha <= 0.15) {
+          box.style.borderColor = '#3b82f6'; box.style.backgroundColor = '#eff6ff';
+          title.style.color = '#1e40af'; text.style.color = '#1e3a5f';
+          message = `With \u03B1 = ${currentAlpha.toFixed(2)}, the forecast barely reacts to new data. It essentially predicts the long-run average revenue (~\u20AC${Math.round(actuals.reduce((a,b)=>a+b,0)/n/1000)}K). The blue line is nearly flat \u2014 it ignores the seasonal peaks entirely. MAPE: ${sesMAPEval.toFixed(1)}%.`;
+        } else if (currentAlpha <= 0.5) {
+          box.style.borderColor = '#8b5cf6'; box.style.backgroundColor = '#f5f3ff';
+          title.style.color = '#5b21b6'; text.style.color = '#3b0764';
+          message = `With \u03B1 = ${currentAlpha.toFixed(2)}, the forecast responds moderately to recent data. Watch the blue line \u2014 it follows the seasonal pattern but is always <strong>one month late</strong>. When actual revenue surges in July, SES doesn't catch up until August. MAPE: ${sesMAPEval.toFixed(1)}%.`;
+        } else {
+          box.style.borderColor = '#dc2626'; box.style.backgroundColor = '#fef2f2';
+          title.style.color = '#991b1b'; text.style.color = '#450a0a';
+          message = `With \u03B1 = ${currentAlpha.toFixed(2)}, the forecast chases every fluctuation. It's essentially "last month's value" \u2014 reactive but always one step behind. For seasonal data, this means the forecast surges AFTER the peak, not before it. MAPE: ${sesMAPEval.toFixed(1)}%.`;
+        }
+
+        const beatsBenchmark = sesMAPEval < benchmarkMAPE;
+        message += `<br><br><strong>Key insight:</strong> SES has ONE number (the current level). It doesn't know what month it is. The naive seasonal forecast "knows" that July is always high because it looks at last July. That's why ${beatsBenchmark ? 'even though SES wins here, it usually loses to' : 'SES cannot beat'} a seasonal benchmark \u2014 SES has no seasonal component.`;
+
+      } else {
+        // === NON-SEASONAL INTERPRETATION ===
+        const beatsBenchmark = sesMAPEval < benchmarkMAPE;
+
+        if (currentAlpha <= 0.15) {
+          box.style.borderColor = '#3b82f6'; box.style.backgroundColor = '#eff6ff';
+          title.style.color = '#1e40af'; text.style.color = '#1e3a5f';
+          message = `With \u03B1 = ${currentAlpha.toFixed(2)}, SES heavily smooths the data \u2014 the forecast moves slowly and filters out most noise. On this non-seasonal data, it produces a very stable forecast. MAPE: ${sesMAPEval.toFixed(1)}%.`;
+        } else if (currentAlpha <= 0.5) {
+          box.style.borderColor = '#0d9488'; box.style.backgroundColor = '#f0fdfa';
+          title.style.color = '#134e4a'; text.style.color = '#134e4a';
+          message = `With \u03B1 = ${currentAlpha.toFixed(2)}, SES balances stability and responsiveness. On this non-seasonal data, it tracks the underlying level well without overreacting to random fluctuations. MAPE: ${sesMAPEval.toFixed(1)}%.`;
+        } else {
+          box.style.borderColor = '#dc2626'; box.style.backgroundColor = '#fef2f2';
+          title.style.color = '#991b1b'; text.style.color = '#450a0a';
+          message = `With \u03B1 = ${currentAlpha.toFixed(2)}, SES reacts strongly to each new observation. On this non-seasonal data, it behaves like "last month's value" \u2014 which is actually the naive benchmark itself. MAPE: ${sesMAPEval.toFixed(1)}%.`;
+        }
+
+        message += `<br><br><strong>Key insight:</strong> This data fluctuates around a gently rising level with <strong>no seasonal pattern</strong>. SES is designed exactly for this \u2014 it smooths random noise and tracks the level. ${beatsBenchmark ? 'That\'s why SES beats the naive baseline here.' : 'At very high alpha, SES mimics the naive baseline rather than improving on it.'}`;
+        message += ` <strong>Compare with the hotel data</strong> \u2014 same method, same alpha, very different results. Method choice depends on data structure.`;
+      }
+
+      text.innerHTML = message;
+    }
+
+    // ===== EVENT HANDLERS =====
+
+    function setAlpha(a) {
+      currentAlpha = a;
+      document.getElementById('alphaSlider').value = a;
+      update();
+    }
+
+    document.getElementById('alphaSlider').addEventListener('input', function() {
+      currentAlpha = parseFloat(this.value);
+      update();
+    });
+
+    // ===== INITIALIZE =====
+    update();
+  </script>
+</body>
+</html>
